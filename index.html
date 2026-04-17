@@ -10,116 +10,78 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="bg-slate-50 text-slate-900 transition-colors duration-300">
-    
-    <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen p-4">
-        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-100">
-            <h1 class="text-3xl font-bold mb-2 text-indigo-600 text-center">TaskFlow</h1>
-            <p class="text-slate-500 mb-8 text-center">Organize your life, one task at a time.</p>
 
-            <form id="login-form" class="space-y-4 mb-6">
-                <div>
-                    <label class="block text-sm font-medium text-slate-700">Email Address</label>
-                    <input type="email" id="login-email" class="w-full p-3 border rounded-xl mt-1 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="you@example.com" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700">Password</label>
-                    <div class="relative">
-                        <input type="password" id="login-pass" class="w-full p-3 border rounded-xl mt-1 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="••••••••" required>
-                        <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-4 text-slate-400">
-                            <i class="fas fa-eye" id="eye-icon"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="flex items-center justify-between text-sm">
-                    <label class="flex items-center cursor-pointer">
-                        <input type="checkbox" id="remember-me" class="mr-2 accent-indigo-600"> Remember me
-                    </label>
-                </div>
-                <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded-xl font-bold hover:bg-indigo-700 transition">
-                    Login / Sign Up
-                </button>
+    <div id="auth-container" class="flex flex-col items-center justify-center min-h-screen p-4">
+        <div id="login-screen" class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-100">
+            <h1 class="text-3xl font-bold mb-6 text-indigo-600 text-center">Login</h1>
+            <form id="login-form" class="space-y-4">
+                <input type="text" id="login-id" placeholder="Username or Email" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" required>
+                <input type="password" id="login-pass" placeholder="Password" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" required>
+                <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded-xl font-bold hover:bg-indigo-700 transition">Login</button>
             </form>
-
             <div class="relative my-6 text-center">
                 <hr class="border-slate-200">
-                <span class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-4 text-xs text-slate-400 uppercase tracking-widest">Or continue with</span>
+                <span class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-xs text-slate-400">OR</span>
             </div>
+            <div id="g_id_onload" data-client_id="719440937863-03c88m70a8o4q60gegqt9ungil7i3uhd.apps.googleusercontent.com" data-callback="handleCredentialResponse"></div>
+            <div class="g_id_signin flex justify-center mb-4" data-type="standard"></div>
+            <p class="text-center text-sm text-slate-500">Need an account? <button onclick="toggleAuth(true)" class="text-indigo-600 font-bold">Register Now</button></p>
+        </div>
 
-            <div id="g_id_onload"
-                 data-client_id="YOUR_GOOGLE_CLIENT_ID_HERE"
-                 data-callback="handleCredentialResponse">
-            </div>
-            <div class="g_id_signin flex justify-center" data-type="standard"></div>
+        <div id="register-screen" class="hidden bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-100">
+            <h1 class="text-3xl font-bold mb-4 text-indigo-600 text-center">Create Account</h1>
+            <form id="register-form" class="space-y-3">
+                <input type="text" id="reg-user" placeholder="Full Name" class="w-full p-2 border rounded-lg outline-none" required>
+                <input type="email" id="reg-email" placeholder="Email Address" class="w-full p-2 border rounded-lg outline-none" required>
+                <input type="tel" id="reg-phone" placeholder="Phone Number" class="w-full p-2 border rounded-lg outline-none" required>
+                <input type="password" id="reg-pass" placeholder="Password" class="w-full p-2 border rounded-lg outline-none" required>
+                <input type="password" id="reg-confirm" placeholder="Confirm Password" class="w-full p-2 border rounded-lg outline-none" required>
+                <label class="flex items-center text-xs text-slate-500 cursor-pointer">
+                    <input type="checkbox" required class="mr-2"> I agree to the <span class="text-indigo-600 underline ml-1" onclick="alert('Terms: Data is stored in your private Google Sheet.')">Terms & Conditions</span>
+                </label>
+                <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded-xl font-bold transition">Sign Up</button>
+            </form>
+            <p class="mt-4 text-center text-sm text-slate-500">Already have an account? <button onclick="toggleAuth(false)" class="text-indigo-600 font-bold">Back to Login</button></p>
         </div>
     </div>
 
     <div id="app-screen" class="hidden min-h-screen flex flex-col">
-        <nav class="bg-white shadow-sm px-6 py-4 flex justify-between items-center border-b">
-            <h2 class="text-xl font-bold text-indigo-600 flex items-center gap-2">
-                <i class="fas fa-check-circle"></i> TaskFlow
-            </h2>
+        <nav class="bg-white border-b px-6 py-4 flex justify-between items-center">
+            <h2 class="text-xl font-bold text-indigo-600">TaskFlow</h2>
             <div class="flex items-center gap-4">
-                <button id="theme-toggle" class="p-2 rounded-full hover:bg-slate-100 transition-colors">
-                    <i class="fas fa-moon"></i>
-                </button>
-                <img id="user-pic" class="w-8 h-8 rounded-full border border-indigo-100" src="">
-                <button onclick="logout()" class="text-sm font-semibold text-red-500 hover:text-red-700 transition">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </button>
+                <button id="theme-toggle" class="p-2 rounded-full hover:bg-slate-100"><i class="fas fa-moon"></i></button>
+                <button onclick="logout()" class="text-sm font-bold text-red-500">Logout</button>
             </div>
         </nav>
 
-        <main class="flex-1 p-4 md:p-8 max-w-6xl mx-auto w-full grid grid-cols-1 md:grid-cols-4 gap-6">
+        <main class="flex-1 p-6 max-w-6xl mx-auto w-full grid grid-cols-1 md:grid-cols-4 gap-6">
             <aside class="md:col-span-1 border-r pr-4">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="font-bold text-slate-400 uppercase text-xs tracking-widest">My Collections</h3>
-                    <button onclick="createNewList()" class="bg-indigo-50 text-indigo-600 w-8 h-8 rounded-lg hover:bg-indigo-600 hover:text-white transition flex items-center justify-center">
-                        <i class="fas fa-plus"></i>
-                    </button>
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase">Collections</h3>
+                    <button onclick="createNewList()" class="text-indigo-600"><i class="fas fa-plus-circle"></i></button>
                 </div>
-                <ul id="list-container" class="space-y-1">
-                    </ul>
+                <ul id="list-container" class="space-y-2"></ul>
             </aside>
 
             <section class="md:col-span-3">
-                <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-                    <h2 id="active-list-title" class="text-3xl font-extrabold text-slate-800 tracking-tight">Select a List</h2>
-                    <div class="flex items-center bg-slate-100 rounded-xl px-3 py-2 border border-slate-200">
-                        <i class="fas fa-search text-slate-400 mr-2 text-sm"></i>
-                        <input id="search-tasks" type="text" onkeyup="filterTasks()" placeholder="Search tasks..." class="bg-transparent border-none outline-none text-sm w-full md:w-48">
+                <h2 id="active-list-title" class="text-2xl font-bold mb-6">Welcome Back!</h2>
+                
+                <form id="task-form" class="hidden mb-8 bg-white p-4 rounded-xl shadow-sm border space-y-3">
+                    <input type="text" id="task-input" placeholder="Task description..." class="w-full p-2 border-b outline-none" required>
+                    <div class="flex flex-wrap gap-2 items-center">
+                        <input type="date" id="task-date" class="p-2 border rounded text-sm">
+                        <input type="time" id="task-time" class="p-2 border rounded text-sm">
+                        <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg ml-auto font-bold">Add Task</button>
                     </div>
-                </div>
-
-                <form id="task-form" class="hidden mb-8 flex gap-3 bg-white p-2 rounded-2xl shadow-sm border">
-                    <input type="text" id="task-input" placeholder="Add a new task..." class="flex-1 p-3 outline-none text-slate-700 font-medium" required>
-                    <input type="date" id="task-date" class="p-2 text-sm text-slate-500 border-none outline-none">
-                    <button type="submit" class="bg-indigo-600 text-white px-6 py-3 rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-200 transition font-bold">
-                        Add
-                    </button>
                 </form>
 
-                <div id="task-loader" class="hidden text-center py-10">
-                    <i class="fas fa-spinner fa-spin text-3xl text-indigo-500"></i>
-                </div>
-                
-                <ul id="task-container" class="space-y-3">
-                    </ul>
-
-                <div id="empty-state" class="text-center py-24 text-slate-300">
-                    <i class="fas fa-layer-group text-6xl mb-6 opacity-20"></i>
-                    <p class="text-lg font-medium">Your task list is empty.</p>
-                    <p class="text-sm">Select a collection or create a new one to begin.</p>
-                </div>
+                <ul id="task-container" class="space-y-3"></ul>
+                <div id="empty-state" class="text-center py-20 text-slate-300">Select a list to see tasks.</div>
             </section>
         </main>
-
-        <footer class="bg-white border-t p-6 text-center text-sm text-slate-400">
-            <p>© Sagar Dulal | Owner: <a href="https://sagardulal09.github.io/SagarDulal/" class="text-indigo-600 font-bold hover:underline">Sagar Dulal</a></p>
-        </footer>
     </div>
 
-    <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-6 py-3 rounded-xl shadow-2xl translate-y-24 transition-transform duration-300 z-50 flex items-center gap-3">
-        </div>
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-6 py-3 rounded-xl shadow-2xl translate-y-24 transition-transform duration-300 z-50"></div>
 
     <script src="js/api.js"></script>
     <script src="js/app.js"></script>

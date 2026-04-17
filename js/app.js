@@ -82,3 +82,27 @@ function logout() {
     localStorage.removeItem('todo_remember');
     location.reload();
 }
+// Function to show toast notifications
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    if (!toast) return; // Exit if toast element doesn't exist
+
+    toast.innerText = message;
+    
+    // Change color based on type
+    if (type === 'error') {
+        toast.classList.add('bg-red-600');
+        toast.classList.remove('bg-slate-800');
+    } else {
+        toast.classList.add('bg-slate-800');
+        toast.classList.remove('bg-red-600');
+    }
+
+    // Show toast
+    toast.style.transform = 'translateY(0)';
+    
+    // Hide after 3 seconds
+    setTimeout(() => {
+        toast.style.transform = 'translateY(100px)';
+    }, 3000);
+}

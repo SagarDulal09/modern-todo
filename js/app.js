@@ -53,18 +53,43 @@ async function loadLists() {
     }
 }
 
-async function createNewList() {
-    const title = prompt("Enter List Name:");
-    if (!title) return;
+// MODAL CONTROLS
+function openListModal() {
+    document.getElementById('list-modal').classList.remove('hidden');
+}
+
+function closeListModal() {
+    document.getElementById('list-modal').classList.add('hidden');
+    document.getElementById('list-modal-form').reset();
+}
+
+// HANDLE MODAL SUBMISSION
+document.getElementById('list-modal-form').onsubmit = async (e) => {
+    e.preventDefault();
     const user = JSON.parse(localStorage.getItem('todo_user'));
     
-    showToast("Creating list...");
-    const res = await apiRequest({ action: 'addList', userId: user.id, title: title });
+    const listData = {
+        action: 'addList',
+        userId: user.id,
+        title: document.getElementById('modal-list-title').value,
+        description: document.getElementById('modal-list-desc').value,
+        startDate: document.getElementById('modal-start-date').value,
+        endDate: document.getElementById('modal-end-date').value,
+        startTime: document.getElementById('modal-start-time').value,
+        endTime: document.getElementById('modal-end-time').value
+    };
+
+    showToast("Creating collection...");
+    const res = await apiRequest(listData);
     if (res.success) {
-        showToast("List Added!");
+        showToast("List Created Successfully!");
+        closeListModal();
         loadLists();
     }
-}
+};
+
+// Update your sidebar button in HTML to: 
+// <button onclick="openListModal()"> ... </button>
 
 // 3. TASK MANAGEMENT
 let currentListId = null;

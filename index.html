@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Todo | Sagar Dulal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+
+<body class="bg-slate-50 text-slate-900 transition-colors duration-300">
+
+    <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen">
+        <div class="bg-white p-8 rounded-2xl shadow-xl text-center max-w-sm w-full">
+            <h1 class="text-3xl font-bold mb-6 text-indigo-600">TaskFlow</h1>
+            <p class="text-slate-500 mb-8">Organize your life, one task at a time.</p>
+            <div id="g_id_onload" data-client_id="YOUR_GOOGLE_CLIENT_ID_HERE" data-callback="handleCredentialResponse">
+            </div>
+            <div class="g_id_signin flex justify-center" data-type="standard"></div>
+        </div>
+    </div>
+
+    <div id="app-screen" class="hidden min-h-screen flex flex-col">
+        <nav class="bg-white shadow-sm px-6 py-4 flex justify-between items-center">
+            <h2 class="text-xl font-bold text-indigo-600">My Tasks</h2>
+            <div class="flex items-center gap-4">
+                <button id="theme-toggle" class="p-2 rounded-full hover:bg-slate-100"><i
+                        class="fas fa-moon"></i></button>
+                <img id="user-pic" class="w-8 h-8 rounded-full border">
+                <button onclick="logout()" class="text-sm font-medium text-red-500">Logout</button>
+            </div>
+        </nav>
+
+        <main class="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full grid grid-cols-1 md:grid-cols-4 gap-6">
+            <aside class="md:col-span-1 border-r pr-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-semibold text-slate-500 uppercase text-xs tracking-wider">My Lists</h3>
+                    <button onclick="createNewList()" class="text-indigo-600 hover:text-indigo-800"><i
+                            class="fas fa-plus"></i></button>
+                </div>
+                <ul id="list-container" class="space-y-2">
+                </ul>
+            </aside>
+
+            <section class="md:col-span-3">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 id="active-list-title" class="text-2xl font-bold">Select a list</h2>
+                    <div class="flex gap-2">
+                        <input id="search-tasks" type="text" placeholder="Search..."
+                            class="px-3 py-1 border rounded-lg text-sm">
+                    </div>
+                </div>
+
+                <form id="task-form" class="hidden mb-6 flex gap-2">
+                    <input type="text" id="task-input" placeholder="What needs to be done?"
+                        class="flex-1 p-3 border rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                        required>
+                    <input type="date" id="task-date" class="p-3 border rounded-xl text-sm">
+                    <button type="submit"
+                        class="bg-indigo-600 text-white px-6 py-3 rounded-xl hover:bg-indigo-700 transition">Add</button>
+                </form>
+
+                <div id="task-loader" class="hidden text-center py-10"><i
+                        class="fas fa-spinner fa-spin text-2xl text-indigo-500"></i></div>
+                <ul id="task-container" class="space-y-3">
+                </ul>
+                <div id="empty-state" class="text-center py-20 text-slate-400">
+                    <i class="fas fa-tasks text-4xl mb-4"></i>
+                    <p>No tasks yet. Create a list and start planning!</p>
+                </div>
+            </section>
+        </main>
+
+        <footer class="bg-white border-t p-4 text-center text-sm text-slate-500">
+            © Sagar Dulal | Owner: <a href="https://sagardulal09.github.io/SagarDulal/"
+                class="text-indigo-600 hover:underline">Sagar Dulal</a>
+        </footer>
+    </div>
+
+    <div id="toast"
+        class="fixed bottom-5 right-5 bg-slate-800 text-white px-6 py-3 rounded-lg shadow-2xl translate-y-20 transition-transform duration-300 z-50">
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>

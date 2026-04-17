@@ -87,3 +87,52 @@ window.onload = () => {
     }
 };
 
+// 1. Initializing the Dashboard
+function initApp() {
+    const user = JSON.parse(localStorage.getItem('todo_user'));
+    if (!user) return;
+
+    // Set User Info
+    const userPic = document.getElementById('user-pic');
+    if(userPic) userPic.src = user.picture;
+
+    // Start loading data from Google Sheets
+    loadLists();
+    
+    // Attach Theme Toggle Listener
+    const themeBtn = document.getElementById('theme-toggle');
+    if(themeBtn) {
+        themeBtn.onclick = () => {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            themeBtn.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        };
+    }
+}
+
+// 2. The Logout Function
+function logout() {
+    localStorage.removeItem('todo_user');
+    localStorage.removeItem('todo_remember');
+    location.reload(); // This takes them back to login screen
+}
+
+// 3. The List Creation Function
+async function createNewList() {
+    const title = prompt("Enter List Name (e.g., Work, Groceries):");
+    if (!title) return;
+
+    const user = JSON.parse(localStorage.getItem('todo_user'));
+    showToast("Creating list...");
+
+    const res = await apiRequest({ 
+        action: 'addList', 
+        userId: user.id, 
+        title: title 
+    });
+
+    if (res && res.success) {
+        showToast("List Created!");
+        loadLists(); // Refresh the sidebar
+    }
+}

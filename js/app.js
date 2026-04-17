@@ -1,138 +1,171 @@
-/* AUTH.JS - Handles Google Login & Email/Password Login 
-   Author: Sagar Dulal
+/* APP.JS - The Core Dashboard Logic
+   Handles: Dark Mode, Lists, Tasks, and Status Updates
 */
-// js/app.js - Top of the file
-function showToast(message, type = 'success') {
-    const toast = document.getElementById('toast');
-    if (!toast) return;
-    toast.innerText = message;
-    toast.className = `fixed bottom-5 right-5 text-white px-6 py-3 rounded-lg shadow-2xl transition-transform duration-300 z-50 ${type === 'error' ? 'bg-red-600' : 'bg-slate-800'}`;
-    toast.style.transform = 'translateY(0)';
-    setTimeout(() => { toast.style.transform = 'translateY(100px)'; }, 3000);
-}
 
-// ... rest of your existing app.js functions (loadLists, renderTask, etc.)
+// 1. GLOBAL STATE & THEME
+const themeBtn = document.getElementById('theme-toggle');
 
-// 1. Toggle Password Visibility
-function togglePasswordVisibility() {
-    const passInput = document.getElementById('login-pass');
-    const icon = document.getElementById('eye-icon');
-    if (passInput.type === "password") {
-        passInput.type = "text";
-        icon.classList.replace('fa-eye', 'fa-eye-slash');
-    } else {
-        passInput.type = "password";
-        icon.classList.replace('fa-eye-slash', 'fa-eye');
-    }
-}
-
-// 2. Handle Google Login Response
-async function handleCredentialResponse(response) {
-    const payload = JSON.parse(atob(response.credential.split('.')[1]));
-    const user = {
-        id: payload.sub,
-        name: payload.name,
-        email: payload.email,
-        picture: payload.picture,
-        type: 'google'
-    };
-
-    showToast("Logging in with Google...");
-    await syncUser(user);
-    localStorage.setItem('todo_user', JSON.stringify(user));
-    initApp();
-}
-
-// 3. Handle Standard Email/Password Form
-document.getElementById('login-form').onsubmit = async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-pass').value;
-    const remember = document.getElementById('remember-me').checked;
-
-    const user = {
-        id: btoa(email).substring(0, 10), // Create a unique ID from email
-        name: email.split('@')[0],
-        email: email,
-        password: password,
-        picture: `https://ui-avatars.com/api/?name=${email}&background=random`,
-        type: 'custom'
-    };
-
-    showToast("Syncing account...");
-    const res = await syncUser(user);
-    
-    if (res.success) {
-        if (remember) localStorage.setItem('todo_remember', 'true');
-        localStorage.setItem('todo_user', JSON.stringify(user));
-        initApp();
-    } else {
-        showToast("Error saving to sheet!", "error");
-    }
-};
-
-// 4. Sync with Google Sheets
-async function syncUser(user) {
-    return await apiRequest({ action: 'syncUser', user: user });
-}
-
-// 5. Check Session on Load
-window.onload = () => {
-    const savedUser = localStorage.getItem('todo_user');
-    const remember = localStorage.getItem('todo_remember');
-    
-    // If "Remember Me" was checked, log in automatically
-    if (savedUser && (remember === 'true')) {
-        initApp();
-    }
-};
-
-// 1. Initializing the Dashboard
+// Initialize App on Load
 function initApp() {
     const user = JSON.parse(localStorage.getItem('todo_user'));
     if (!user) return;
 
-    // Set User Info
-    const userPic = document.getElementById('user-pic');
-    if(userPic) userPic.src = user.picture;
+    // Apply Saved Theme
+    if (localStorage.getItem('theme') === 'dark') {
+        document.body.classList.add('dark-mode');
+        if(themeBtn) themeBtn.innerHTML = '<i class="fas fa-sun"></i>';
+    }
 
-    // Start loading data from Google Sheets
-    loadLists();
-    
-    // Attach Theme Toggle Listener
-    const themeBtn = document.getElementById('theme-toggle');
-    if(themeBtn) {
-        themeBtn.onclick = () => {
-            document.body.classList.toggle('dark-mode');
-            const isDark = document.body.classList.contains('dark-mode');
-            themeBtn.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-        };
+    loadLists(); // Fetch your collections from Google Sheets
+}
+
+// Dark Mode Toggle
+if (themeBtn) {
+    themeBtn.onclick = () => {
+        document.body.classList.toggle('dark-mode');
+        const isDark = document.body.classList.contains('dark-mode');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        themeBtn.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    };
+}
+
+// 2. LIST / COLLECTION MANAGEMENT
+async function loadLists() {
+    const user = JSON.parse(localStorage.getItem('todo_user'));
+    const container = document.getElementById('list-container');
+    container.innerHTML = '<p class="text-xs p-2">Loading...</p>';
+
+    const res = await apiRequest({ action: 'getLists', userId: user.id });
+    container.innerHTML = '';
+
+    if (res.success && res.lists.length > 0) {
+        res.lists.forEach(list => {
+            const li = document.createElement('li');
+            li.className = "flex items-center justify-between p-2 rounded-lg cursor-pointer hover:bg-indigo-50 dark:hover:bg-slate-800 transition group";
+            li.innerHTML = `
+                <span onclick="selectList('${list.id}', '${list.title}')" class="flex-1 font-medium text-sm">${list.title}</span>
+                <button onclick="deleteList('${list.id}')" class="opacity-0 group-hover:opacity-100 text-red-400 p-1"><i class="fas fa-times text-xs"></i></button>
+            `;
+            container.appendChild(li);
+        });
+    } else {
+        container.innerHTML = '<p class="text-xs text-slate-400 p-2">No lists created.</p>';
     }
 }
 
-// 2. The Logout Function
-function logout() {
-    localStorage.removeItem('todo_user');
-    localStorage.removeItem('todo_remember');
-    location.reload(); // This takes them back to login screen
+async function createNewList() {
+    const title = prompt("Enter List Name:");
+    if (!title) return;
+    const user = JSON.parse(localStorage.getItem('todo_user'));
+    
+    showToast("Creating list...");
+    const res = await apiRequest({ action: 'addList', userId: user.id, title: title });
+    if (res.success) {
+        showToast("List Added!");
+        loadLists();
+    }
 }
 
-// 3. The List Creation Function
-async function createNewList() {
-    const title = prompt("Enter List Name (e.g., Work, Groceries):");
-    if (!title) return;
+// 3. TASK MANAGEMENT
+let currentListId = null;
 
-    const user = JSON.parse(localStorage.getItem('todo_user'));
-    showToast("Creating list...");
+function selectList(id, title) {
+    currentListId = id;
+    document.getElementById('active-list-title').innerText = title;
+    document.getElementById('task-form').classList.remove('hidden');
+    document.getElementById('empty-state').classList.add('hidden');
+    loadTasks();
+}
 
-    const res = await apiRequest({ 
-        action: 'addList', 
-        userId: user.id, 
-        title: title 
+async function loadTasks() {
+    const container = document.getElementById('task-container');
+    container.innerHTML = '<div class="text-center py-10"><i class="fas fa-spinner fa-spin text-indigo-500"></i></div>';
+
+    const res = await apiRequest({ action: 'getTasks', listId: currentListId });
+    container.innerHTML = '';
+
+    if (res.success && res.tasks.length > 0) {
+        res.tasks.forEach(task => renderTask(task));
+    } else {
+        document.getElementById('empty-state').classList.remove('hidden');
+    }
+}
+
+// Handle Task Form Submission
+document.getElementById('task-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const text = document.getElementById('task-input').value;
+    const date = document.getElementById('task-date').value;
+    const time = document.getElementById('task-time').value;
+
+    showToast("Saving task...");
+    const res = await apiRequest({
+        action: 'addTask',
+        listId: currentListId,
+        text: text,
+        status: 'Pending',
+        dueDate: date,
+        dueTime: time
     });
 
-    if (res && res.success) {
-        showToast("List Created!");
-        loadLists(); // Refresh the sidebar
+    if (res.success) {
+        document.getElementById('task-form').reset();
+        loadTasks();
     }
+};
+
+// 4. THE TASK RENDERER (With Status & Due Dates)
+function renderTask(task) {
+    const container = document.getElementById('task-container');
+    const li = document.createElement('li');
+    li.className = "bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 flex flex-col gap-2 shadow-sm";
+    
+    // Status color logic
+    const statusStyles = {
+        'Pending': 'bg-amber-100 text-amber-700',
+        'In Progress': 'bg-blue-100 text-blue-700',
+        'Completed': 'bg-green-100 text-green-700'
+    };
+
+    li.innerHTML = `
+        <div class="flex justify-between items-center">
+            <span class="font-bold ${task.status === 'Completed' ? 'line-through opacity-50' : ''}">${task.text}</span>
+            <select onchange="updateTaskStatus('${task.id}', this.value)" class="text-[10px] font-bold px-2 py-1 rounded-full border-none outline-none ${statusStyles[task.status]}">
+                <option value="Pending" ${task.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                <option value="In Progress" ${task.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                <option value="Completed" ${task.status === 'Completed' ? 'selected' : ''}>Completed</option>
+            </select>
+        </div>
+        <div class="flex gap-4 text-[10px] text-slate-400 font-medium">
+            <span><i class="far fa-calendar-alt"></i> ${task.dueDate || 'No Date'}</span>
+            <span><i class="far fa-clock"></i> ${task.dueTime || 'No Time'}</span>
+            <button onclick="deleteTask('${task.id}')" class="ml-auto text-red-400 hover:text-red-600 transition"><i class="fas fa-trash"></i></button>
+        </div>
+    `;
+    container.appendChild(li);
 }
+
+async function updateTaskStatus(taskId, newStatus) {
+    showToast("Updating status...");
+    const res = await apiRequest({ action: 'updateTask', taskId: taskId, status: newStatus });
+    if(res.success) loadTasks();
+}
+
+async function deleteTask(taskId) {
+    if(!confirm("Delete this task?")) return;
+    showToast("Deleting...");
+    const res = await apiRequest({ action: 'deleteTask', taskId: taskId });
+    if(res.success) loadTasks();
+}
+
+// Helper: Toast Notifications
+function showToast(msg, type = 'success') {
+    const toast = document.getElementById('toast');
+    toast.innerText = msg;
+    toast.className = `fixed bottom-5 right-5 text-white px-6 py-3 rounded-xl shadow-2xl transition-all duration-300 z-50 ${type === 'error' ? 'bg-red-600' : 'bg-slate-800'}`;
+    toast.style.transform = 'translateY(0)';
+    setTimeout(() => { toast.style.transform = 'translateY(100px)'; }, 3000);
+}
+
+// Start everything
+initApp();

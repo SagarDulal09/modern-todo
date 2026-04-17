@@ -141,3 +141,5 @@ body.dark-mode #task-container li:hover {
         margin-bottom: 1rem;
     }
 }
+body.dark-mode { background-color: #0f172a !important; color: white; }
+body.dark-mode .bg-white { background-color: #1e293b !important; color: white; border-color: #334155; }

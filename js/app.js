@@ -1,120 +1,84 @@
-let currentListId = null;
+/* AUTH.JS - Handles Google Login & Email/Password Login 
+   Author: Sagar Dulal
+*/
 
-function initApp() {
-    document.getElementById('login-screen').classList.add('hidden');
-    document.getElementById('app-screen').classList.remove('hidden');
-    const user = JSON.parse(localStorage.getItem('todo_user'));
-    document.getElementById('user-pic').src = user.picture;
-    loadLists();
+// 1. Toggle Password Visibility
+function togglePasswordVisibility() {
+    const passInput = document.getElementById('login-pass');
+    const icon = document.getElementById('eye-icon');
+    if (passInput.type === "password") {
+        passInput.type = "text";
+        icon.classList.replace('fa-eye', 'fa-eye-slash');
+    } else {
+        passInput.type = "password";
+        icon.classList.replace('fa-eye-slash', 'fa-eye');
+    }
 }
 
-async function loadLists() {
-    const user = JSON.parse(localStorage.getItem('todo_user'));
-    const res = await apiRequest({ action: 'getLists', userId: user.id });
-    const container = document.getElementById('list-container');
-    container.innerHTML = '';
+// 2. Handle Google Login Response
+async function handleCredentialResponse(response) {
+    const payload = JSON.parse(atob(response.credential.split('.')[1]));
+    const user = {
+        id: payload.sub,
+        name: payload.name,
+        email: payload.email,
+        picture: payload.picture,
+        type: 'google'
+    };
 
-    res.lists.forEach(list => {
-        const li = document.createElement('li');
-        li.className = `p-2 rounded-lg cursor-pointer flex justify-between group ${currentListId === list.id ? 'bg-indigo-100 text-indigo-700 font-bold' : 'hover:bg-slate-100'}`;
-        li.innerHTML = `
-            <span onclick="selectList('${list.id}', '${list.title}')">${list.title}</span>
-            <button onclick="deleteList('${list.id}')" class="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600"><i class="fas fa-trash-alt"></i></button>
-        `;
-        container.appendChild(li);
-    });
+    showToast("Logging in with Google...");
+    await syncUser(user);
+    localStorage.setItem('todo_user', JSON.stringify(user));
+    initApp();
 }
 
-async function createNewList() {
-    const title = prompt("Enter List Name:");
-    if (!title) return;
-    const user = JSON.parse(localStorage.getItem('todo_user'));
-    await apiRequest({ action: 'addList', userId: user.id, title });
-    loadLists();
-}
-
-async function selectList(id, title) {
-    currentListId = id;
-    document.getElementById('active-list-title').innerText = title;
-    document.getElementById('task-form').classList.remove('hidden');
-    document.getElementById('empty-state').classList.add('hidden');
-    loadLists(); // Refresh active state
-    loadTasks();
-}
-
-async function loadTasks() {
-    document.getElementById('task-loader').classList.remove('hidden');
-    const res = await apiRequest({ action: 'getTasks', listId: currentListId });
-    document.getElementById('task-loader').classList.add('hidden');
-
-    const container = document.getElementById('task-container');
-    container.innerHTML = '';
-    res.tasks.forEach(task => renderTask(task));
-}
-
-function renderTask(task) {
-    const container = document.getElementById('task-container');
-    const li = document.createElement('li');
-    li.className = "bg-white p-4 rounded-xl shadow-sm border flex items-center justify-between animate-slide-in";
-    li.innerHTML = `
-        <div class="flex items-center gap-3">
-            <input type="checkbox" ${task.status === 'complete' ? 'checked' : ''} 
-                onchange="toggleTask('${task.id}', this.checked)" class="w-5 h-5 accent-indigo-600">
-            <span class="${task.status === 'complete' ? 'line-through text-slate-400' : ''}">${task.text}</span>
-            <span class="text-xs text-slate-400">${task.dueDate || ''}</span>
-        </div>
-        <button onclick="deleteTask('${task.id}')" class="text-slate-300 hover:text-red-500"><i class="fas fa-times"></i></button>
-    `;
-    container.appendChild(li);
-}
-
-document.getElementById('task-form').onsubmit = async (e) => {
+// 3. Handle Standard Email/Password Form
+document.getElementById('login-form').onsubmit = async (e) => {
     e.preventDefault();
-    const input = document.getElementById('task-input');
-    const dateInput = document.getElementById('task-date');
-    const task = { listId: currentListId, text: input.value, dueDate: dateInput.value };
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-pass').value;
+    const remember = document.getElementById('remember-me').checked;
 
-    await apiRequest({ action: 'addTask', task });
-    input.value = '';
-    loadTasks();
-    showToast("Task added!");
+    const user = {
+        id: btoa(email).substring(0, 10), // Create a unique ID from email
+        name: email.split('@')[0],
+        email: email,
+        password: password,
+        picture: `https://ui-avatars.com/api/?name=${email}&background=random`,
+        type: 'custom'
+    };
+
+    showToast("Syncing account...");
+    const res = await syncUser(user);
+    
+    if (res.success) {
+        if (remember) localStorage.setItem('todo_remember', 'true');
+        localStorage.setItem('todo_user', JSON.stringify(user));
+        initApp();
+    } else {
+        showToast("Error saving to sheet!", "error");
+    }
 };
 
-async function toggleTask(id, checked) {
-    await apiRequest({ action: 'updateTask', taskId: id, updates: { status: checked ? 'complete' : 'incomplete' } });
-    loadTasks();
+// 4. Sync with Google Sheets
+async function syncUser(user) {
+    return await apiRequest({ action: 'syncUser', user: user });
 }
 
-async function deleteTask(id) {
-    if (!confirm("Delete this task?")) return;
-    await apiRequest({ action: 'deleteTask', taskId: id });
-    loadTasks();
-}
+// 5. Check Session on Load
+window.onload = () => {
+    const savedUser = localStorage.getItem('todo_user');
+    const remember = localStorage.getItem('todo_remember');
+    
+    // If "Remember Me" was checked, log in automatically
+    if (savedUser && (remember === 'true')) {
+        initApp();
+    }
+};
 
-async function deleteList(id) {
-    if (!confirm("Delete entire list and all its tasks?")) return;
-    await apiRequest({ action: 'deleteList', listId: id });
-    currentListId = null;
+// 6. Logout Function
+function logout() {
+    localStorage.removeItem('todo_user');
+    localStorage.removeItem('todo_remember');
     location.reload();
-}
-
-function showToast(msg) {
-    const toast = document.getElementById('toast');
-    toast.innerText = msg;
-    toast.style.transform = 'translateY(0)';
-    setTimeout(() => toast.style.transform = 'translateY(100px)', 3000);
-}
-// Dark Mode Toggle Logic
-const themeToggle = document.getElementById('theme-toggle');
-themeToggle.addEventListener('click', () => {
-    document.body.classList.toggle('dark-mode');
-    const isDark = document.body.classList.contains('dark-mode');
-    themeToggle.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-    localStorage.setItem('todo_theme', isDark ? 'dark' : 'light');
-});
-
-// Load saved theme on startup
-if (localStorage.getItem('todo_theme') === 'dark') {
-    document.body.classList.add('dark-mode');
-    themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
 }

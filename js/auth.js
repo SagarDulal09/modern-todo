@@ -69,12 +69,16 @@ function checkSession() {
     if (user) {
         if(loginScreen) loginScreen.classList.add('hidden');
         if(appScreen) appScreen.classList.remove('hidden');
-        if(typeof initApp === "function") initApp();
+        
+        // Ensure app.js is ready before calling initApp
+        if (typeof initApp === "function") {
+            initApp(); 
+        }
     } else {
         if(loginScreen) loginScreen.classList.remove('hidden');
         if(appScreen) appScreen.classList.add('hidden');
     }
 }
 
-// Run session check
+// Run session check on every page load
 window.addEventListener('load', checkSession);

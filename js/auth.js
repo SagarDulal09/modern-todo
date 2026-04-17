@@ -1,24 +1,27 @@
-// This function waits for the page to be 100% ready
 document.addEventListener('DOMContentLoaded', () => {
-    
     const loginForm = document.getElementById('login-form');
 
-    // ONLY run this if we are on the login screen
     if (loginForm) {
         loginForm.onsubmit = async (e) => {
-            e.preventDefault(); // Stop page refresh
+            e.preventDefault();
             
-            // 1. Get user input
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-pass').value;
+            const emailInput = document.getElementById('login-email');
+            const passInput = document.getElementById('login-pass');
+            
+            if (!emailInput || !passInput) {
+                console.error("Inputs not found!");
+                return;
+            }
+
+            const email = emailInput.value;
+            const password = passInput.value;
             const remember = document.getElementById('remember-me').checked;
 
-            // 2. Visual Feedback
-            showToast("Syncing with Google Sheets...");
+            // This now works because app.js loaded first!
+            showToast("Authenticating...");
 
-            // 3. Prepare User Object
             const user = {
-                id: btoa(email).substring(0, 10), 
+                id: btoa(email).substring(0, 10),
                 name: email.split('@')[0],
                 email: email,
                 password: password,
@@ -27,40 +30,23 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             try {
-                // 4. Send to Google Sheets (via api.js)
                 const res = await apiRequest({ action: 'syncUser', user: user });
-
                 if (res && res.success) {
                     if (remember) localStorage.setItem('todo_remember', 'true');
                     localStorage.setItem('todo_user', JSON.stringify(user));
-                    
-                    showToast("Login Successful!");
-                    initApp(); // Switch to dashboard
+                    showToast("Login Success!");
+                    setTimeout(() => { location.reload(); }, 500); // Refresh to trigger initApp
                 } else {
-                    alert("Database Error: Check your Apps Script deployment.");
+                    showToast("Server Error. Check Sheet.", "error");
                 }
             } catch (err) {
-                console.error(err);
-                alert("Connection Failed. Is your API_URL correct in api.js?");
+                showToast("Connection failed.", "error");
             }
         };
     }
 });
 
-// Password visibility toggle (keep this outside)
-function togglePasswordVisibility() {
-    const passInput = document.getElementById('login-pass');
-    const icon = document.getElementById('eye-icon');
-    if (passInput.type === "password") {
-        passInput.type = "text";
-        icon.className = "fas fa-eye-slash";
-    } else {
-        passInput.type = "password";
-        icon.className = "fas fa-eye";
-    }
-}
-
-// Keep your handleCredentialResponse (Google Login) here as well...
+// Helper for Google Login
 async function handleCredentialResponse(response) {
     const payload = JSON.parse(atob(response.credential.split('.')[1]));
     const user = {
@@ -70,7 +56,25 @@ async function handleCredentialResponse(response) {
         picture: payload.picture,
         type: 'google'
     };
+    showToast("Google Syncing...");
     await apiRequest({ action: 'syncUser', user: user });
     localStorage.setItem('todo_user', JSON.stringify(user));
-    initApp();
+    location.reload();
 }
+function checkSession() {
+    const user = localStorage.getItem('todo_user');
+    const loginScreen = document.getElementById('login-screen');
+    const appScreen = document.getElementById('app-screen');
+
+    if (user) {
+        if(loginScreen) loginScreen.classList.add('hidden');
+        if(appScreen) appScreen.classList.remove('hidden');
+        if(typeof initApp === "function") initApp();
+    } else {
+        if(loginScreen) loginScreen.classList.remove('hidden');
+        if(appScreen) appScreen.classList.add('hidden');
+    }
+}
+
+// Run session check
+window.addEventListener('load', checkSession);

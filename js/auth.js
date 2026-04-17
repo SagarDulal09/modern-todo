@@ -1,84 +1,54 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const loginForm = document.getElementById('login-form');
+function toggleAuth(showRegister) {
+    document.getElementById('login-screen').classList.toggle('hidden', showRegister);
+    document.getElementById('register-screen').classList.toggle('hidden', !showRegister);
+}
 
-    if (loginForm) {
-        loginForm.onsubmit = async (e) => {
-            e.preventDefault();
-            
-            const emailInput = document.getElementById('login-email');
-            const passInput = document.getElementById('login-pass');
-            
-            if (!emailInput || !passInput) {
-                console.error("Inputs not found!");
-                return;
-            }
+// Handle Registration
+document.getElementById('register-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const pass = document.getElementById('reg-pass').value;
+    const confirm = document.getElementById('reg-confirm').value;
 
-            const email = emailInput.value;
-            const password = passInput.value;
-            const remember = document.getElementById('remember-me').checked;
-
-            // This now works because app.js loaded first!
-            showToast("Authenticating...");
-
-            const user = {
-                id: btoa(email).substring(0, 10),
-                name: email.split('@')[0],
-                email: email,
-                password: password,
-                picture: `https://ui-avatars.com/api/?name=${email}&background=random`,
-                type: 'custom'
-            };
-
-            try {
-                const res = await apiRequest({ action: 'syncUser', user: user });
-                if (res && res.success) {
-                    if (remember) localStorage.setItem('todo_remember', 'true');
-                    localStorage.setItem('todo_user', JSON.stringify(user));
-                    showToast("Login Success!");
-                    setTimeout(() => { location.reload(); }, 500); // Refresh to trigger initApp
-                } else {
-                    showToast("Server Error. Check Sheet.", "error");
-                }
-            } catch (err) {
-                showToast("Connection failed.", "error");
-            }
-        };
+    if (pass !== confirm) {
+        return showToast("Passwords do not match", "error");
     }
-});
 
-// Helper for Google Login
-async function handleCredentialResponse(response) {
-    const payload = JSON.parse(atob(response.credential.split('.')[1]));
     const user = {
-        id: payload.sub,
-        name: payload.name,
-        email: payload.email,
-        picture: payload.picture,
-        type: 'google'
+        name: document.getElementById('reg-user').value,
+        email: document.getElementById('reg-email').value,
+        phone: document.getElementById('reg-phone').value,
+        password: pass,
+        id: "U" + Date.now()
     };
-    showToast("Google Syncing...");
-    await apiRequest({ action: 'syncUser', user: user });
-    localStorage.setItem('todo_user', JSON.stringify(user));
+
+    showToast("Creating account...");
+    const res = await apiRequest({ action: 'registerUser', user });
+    if (res.success) {
+        showToast("Success! Please login.");
+        toggleAuth(false);
+    } else {
+        showToast("Registration failed.", "error");
+    }
+};
+
+// Handle Login
+document.getElementById('login-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const loginId = document.getElementById('login-id').value;
+    const loginPass = document.getElementById('login-pass').value;
+
+    showToast("Checking credentials...");
+    const res = await apiRequest({ action: 'loginUser', loginId, loginPass });
+
+    if (res.success) {
+        localStorage.setItem('todo_user', JSON.stringify(res.user));
+        location.reload();
+    } else {
+        showToast("Invalid user or password.", "error");
+    }
+};
+
+function logout() {
+    localStorage.removeItem('todo_user');
     location.reload();
 }
-function checkSession() {
-    const user = localStorage.getItem('todo_user');
-    const loginScreen = document.getElementById('login-screen');
-    const appScreen = document.getElementById('app-screen');
-
-    if (user) {
-        if(loginScreen) loginScreen.classList.add('hidden');
-        if(appScreen) appScreen.classList.remove('hidden');
-        
-        // Ensure app.js is ready before calling initApp
-        if (typeof initApp === "function") {
-            initApp(); 
-        }
-    } else {
-        if(loginScreen) loginScreen.classList.remove('hidden');
-        if(appScreen) appScreen.classList.add('hidden');
-    }
-}
-
-// Run session check on every page load
-window.addEventListener('load', checkSession);
